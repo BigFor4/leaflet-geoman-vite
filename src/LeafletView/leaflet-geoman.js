@@ -137,14 +137,8 @@ var Mode_Edit_default = GlobalEditMode;
 var GlobalDragMode = {
   _globalDragModeEnabled: false,
   enableGlobalDragMode() {
-    const layers = L.PM.Utils.findLayers(this.map);
     this._globalDragModeEnabled = true;
     this._addedLayersDrag = {};
-    layers.forEach((layer) => {
-      if (this._isRelevantForDrag(layer)) {
-        layer.pm.enableLayerDrag();
-      }
-    });
     if (!this.throttledReInitDrag) {
       this.throttledReInitDrag = L.Util.throttle(
         this.reinitGlobalDragMode,
@@ -297,14 +291,6 @@ var GlobalRotateMode = {
   _globalRotateModeEnabled: false,
   enableGlobalRotateMode() {
     this._globalRotateModeEnabled = true;
-    const layers = L.PM.Utils.findLayers(this.map).filter(
-      (l) => l instanceof L.Polyline
-    );
-    layers.forEach((layer) => {
-      if (this._isRelevantForRotate(layer)) {
-        layer.pm.enableRotate();
-      }
-    });
     if (!this.throttledReInitRotate) {
       this.throttledReInitRotate = L.Util.throttle(
         this.handleLayerAdditionInGlobalRotateMode,
@@ -1235,7 +1221,37 @@ function fixLatOffset(latlng, map) {
 function getRenderer(layer) {
   return layer.options.renderer || layer._map && (layer._map._getPaneRenderer(layer.options.pane) || layer._map.options.renderer || layer._map._renderer) || layer._renderer;
 }
-
+function revertEditLayer(layer) {
+  if (layer?.idLayer) {
+    if (layer instanceof L.Polyline) {
+      layer.setLatLngs(layer._oldLatLng);
+    }
+    if (layer instanceof L.Marker || layer instanceof L.Circle || layer instanceof L.CircleMarker) {
+      layer.setLatLng(layer._oldLatLng);
+    }
+    if (layer instanceof L.Circle || layer instanceof L.CircleMarker) {
+      layer.setRadius(layer._oldRadius);
+    }
+    layer.pm.disable()
+    layer = null;
+  }
+  return true;
+}
+function saveEditLater(layer) {
+  if (layer?.idLayer) {
+    if (layer instanceof L.Polyline) {
+      layer._oldLatLng = layer.getLatLngs();
+    }
+    if (layer instanceof L.Marker || layer instanceof L.Circle || layer instanceof L.CircleMarker) {
+      layer._oldLatLng = layer.getLatLng();
+    }
+    if (layer instanceof L.Circle || layer instanceof L.CircleMarker) {
+      layer._oldRadius = layer.getRadius();
+    }
+    layer.pm.disable()
+    layer = null;
+  }
+}
 var Map = L.Class.extend({
   includes: [
     Mode_Edit_default,
@@ -1640,17 +1656,7 @@ var PMButton = L.Control.extend({
         title: getTranslation("actions.finish"),
         onClick() {
           if (this._map.pm?.layerEdit?.idLayer) {
-            if (this._map.pm.layerEdit instanceof L.Polyline) {
-              this._map.pm.layerEdit._oldLatLng = this._map.pm.layerEdit.getLatLngs();
-            }
-            if (this._map.pm.layerEdit instanceof L.Marker || this._map.pm.layerEdit instanceof L.Circle || this._map.pm.layerEdit instanceof L.CircleMarker) {
-              this._map.pm.layerEdit._oldLatLng = this._map.pm.layerEdit.getLatLng();
-            }
-            if (this._map.pm.layerEdit instanceof L.Circle || this._map.pm.layerEdit instanceof L.CircleMarker) {
-              this._map.pm.layerEdit._oldRadius = this._map.pm.layerEdit.getRadius();
-            }
-            this._map.pm.layerEdit.pm.disable()
-            this._map.pm.layerEdit = null;
+            saveEditLater(this._map.pm.layerEdit)
           }
           this._triggerClick();
         }
@@ -1667,17 +1673,7 @@ var PMButton = L.Control.extend({
         title: getTranslation("actions.cancel"),
         onClick() {
           if (this._map.pm?.layerEdit?.idLayer) {
-            if (this._map.pm.layerEdit instanceof L.Polyline) {
-              this._map.pm.layerEdit.setLatLngs(this._map.pm.layerEdit._oldLatLng);
-            }
-            if (this._map.pm.layerEdit instanceof L.Marker || this._map.pm.layerEdit instanceof L.Circle || this._map.pm.layerEdit instanceof L.CircleMarker) {
-              this._map.pm.layerEdit.setLatLng(this._map.pm.layerEdit._oldLatLng);
-            }
-            if (this._map.pm.layerEdit instanceof L.Circle || this._map.pm.layerEdit instanceof L.CircleMarker) {
-              this._map.pm.layerEdit.setRadius(this._map.pm.layerEdit._oldRadius);
-            }
-            this._map.pm.layerEdit.pm.disable()
-            this._map.pm.layerEdit = null;
+            revertEditLayer(this._map.pm.layerEdit)
           }
           this._triggerClick();
         }
@@ -1977,6 +1973,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: (e, ctx) => {
         this.map.pm.Draw[ctx.button._button.jsClass].toggle();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -1992,6 +1991,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: (e, ctx) => {
         this.map.pm.Draw[ctx.button._button.jsClass].toggle();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2007,6 +2009,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: (e, ctx) => {
         this.map.pm.Draw[ctx.button._button.jsClass].toggle();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2022,6 +2027,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: (e, ctx) => {
         this.map.pm.Draw[ctx.button._button.jsClass].toggle();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2037,6 +2045,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: (e, ctx) => {
         this.map.pm.Draw[ctx.button._button.jsClass].toggle();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2052,6 +2063,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: (e, ctx) => {
         this.map.pm.Draw[ctx.button._button.jsClass].toggle();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2066,6 +2080,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: () => {
         this.map.pm.toggleGlobalEditMode();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2081,13 +2098,16 @@ var Toolbar = L.Class.extend({
       },
       afterClick: () => {
         this.map.pm.toggleGlobalDragMode();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
       disableOtherButtons: true,
       position: this.options.position,
       tool: "edit",
-      actions: ["finishEdit"]
+      actions: ["cancelEdit", "finishEdit"]
     };
     const cutButton = {
       title: getTranslation("buttonTitles.cutButton"),
@@ -2101,6 +2121,9 @@ var Toolbar = L.Class.extend({
           cursorMarker: true,
           allowSelfIntersection: false
         });
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2116,6 +2139,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: () => {
         this.map.pm.toggleGlobalRemovalMode();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2131,13 +2157,16 @@ var Toolbar = L.Class.extend({
       },
       afterClick: () => {
         this.map.pm.toggleGlobalRotateMode();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
       disableOtherButtons: true,
       position: this.options.position,
       tool: "edit",
-      actions: ["finishEdit"]
+      actions: ["cancelEdit", "finishEdit"]
     };
     const drawTextButton = {
       className: "control-icon leaflet-pm-icon-text",
@@ -2147,6 +2176,9 @@ var Toolbar = L.Class.extend({
       },
       afterClick: (e, ctx) => {
         this.map.pm.Draw[ctx.button._button.jsClass].toggle();
+        if (this.map.pm.layerEdit) {
+          revertEditLayer(this.map.pm.layerEdit)
+        }
       },
       doToggle: true,
       toggleStatus: false,
@@ -2865,23 +2897,22 @@ var Draw = L.Class.extend({
     this._map.on('pm:create', (e) => {
       const layer = e.layer;
       layer.on('click', () => {
-        if (self._map?.pm?._globalEditModeEnabled) {
+        if (self._map?.pm?._globalEditModeEnabled || self?._map?.pm?._globalDragModeEnabled || self?._map?.pm?._globalRotateModeEnabled) {
           if (layer.idLayer !== self._map.pm?.layerEdit?.idLayer) {
             if (self._map.pm?.layerEdit?.idLayer) {
-              if (self._map.pm.layerEdit instanceof L.Polyline) {
-                self._map.pm.layerEdit.setLatLngs(self._map.pm.layerEdit._oldLatLng);
-              }
-              if (self._map.pm?.layerEdit instanceof L.Marker || self._map.pm.layerEdit instanceof L.Circle || self._map.pm.layerEdit instanceof L.CircleMarker) {
-                self._map.pm.layerEdit.setLatLng(self._map.pm.layerEdit._oldLatLng);
-              }
-              if (self._map.pm.layerEdit instanceof L.Circle || self._map.pm.layerEdit instanceof L.CircleMarker) {
-                self._map.pm.layerEdit.setRadius(self._map.pm.layerEdit._oldRadius);
-              }
-              self._map.pm.layerEdit.pm.disable()
+              revertEditLayer(self._map.pm.layerEdit)
             }
             const options = self._map?.pm?._editOption || {};
             self._map.pm.layerEdit = layer;
-            layer.pm.enable(options);
+            if (self._map.pm?._globalEditModeEnabled) {
+              layer.pm.enable(options);
+            }
+            if (self._map.pm?._globalRotateModeEnabled) {
+              layer.pm.enableRotate(options);
+            }
+            if (self._map.pm?._globalDragModeEnabled) {
+              layer.pm.enableLayerDrag(options);
+            }
           }
         }
       });
