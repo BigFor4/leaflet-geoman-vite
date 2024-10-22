@@ -28,11 +28,7 @@ export default function App() {
         maps.push(map);
       }
     });
-
-    // Example of adding elements to map2
-    const map2 = maps[0]; // First map (example2)
-
-    // Map2 controls and events
+    const map2 = maps[0];
     map2.pm.addControls({
       drawMarker: true,
       drawPolygon: true,
@@ -41,7 +37,6 @@ export default function App() {
       removalMode: true,
     });
     return () => {
-      // Clean up maps if necessary (optional)
       maps.forEach((map) => {
         map.remove();
       });

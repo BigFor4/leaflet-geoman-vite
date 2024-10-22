@@ -1,19 +1,11 @@
 import * as L from 'leaflet';
-import turflineIntersect from '@turf/line-intersect';
-import turflineSplit from '@turf/line-split';
-import turfbooleanContains from '@turf/boolean-contains';
-import turfkinks from '@turf/kinks';
-import * as polyclip from 'polyclip-ts';
-import _ from 'lodash'; // Import lodash
-
-window.lineIntersect = turflineIntersect;
-window.lineSplit = turflineSplit;
-window.booleanContains = turfbooleanContains;
-window.kinks = turfkinks;
-window.polygonClipping = polyclip;
-
-window.mergeLodash = _.merge;
-window.getLodash = _.get;
+import lineIntersect from '@turf/line-intersect';
+import lineSplit from '@turf/line-split';
+import booleanContains from '@turf/boolean-contains';
+import kinks from '@turf/kinks';
+import * as polygonClipping from 'polyclip-ts';
+import merge from 'lodash/merge';
+import get from 'lodash/get';
 
 (() => {
   // src/js/polyfills.js
@@ -479,8 +471,6 @@ window.getLodash = _.get;
   };
   var Mode_Rotate_default = GlobalRotateMode;
 
-  // src/js/Mixins/Events.js
-  var merge = window.mergeLodash;
   var EventMixin = {
     // Draw Events
     // Fired when enableDraw() is called -> draw start
@@ -1080,7 +1070,7 @@ window.getLodash = _.get;
     },
     // private (very private) fire function
     __fire(fireLayer, type, payload, source, customPayload = {}) {
-      payload = (merge || window.mergeLodash)(payload, customPayload, { source });
+      payload = merge(payload, customPayload, { source });
       L.PM.Utils._fireEvent(fireLayer, type, payload);
     }
   };
@@ -1136,11 +1126,9 @@ window.getLodash = _.get;
   });
   var Keyboard_default = createKeyboardMixins;
 
-  // src/js/helpers/index.js
-  var get = window.getLodash;
   function getTranslation(path) {
     const lang = L.PM.activeLang;
-    return (get || window.getLodash)(translations_default[lang], path) || (get || window.getLodash)(translations_default.en, path) || path;
+    return get(translations_default[lang], path) || get(translations_default.en, path) || path;
   }
   function hasValues(list) {
     for (let i = 0; i < list.length; i += 1) {
@@ -1354,8 +1342,6 @@ window.getLodash = _.get;
     return layer.options.renderer || layer._map && (layer._map._getPaneRenderer(layer.options.pane) || layer._map.options.renderer || layer._map._renderer) || layer._renderer;
   }
 
-  // src/js/L.PM.Map.js
-  var merge2 = window.mergeLodash;
   var Map = L.Class.extend({
     includes: [
       Mode_Edit_default,
@@ -1412,7 +1398,7 @@ window.getLodash = _.get;
       }
       const oldLang = L.PM.activeLang;
       if (override) {
-        translations_default[lang] = (merge2 || window.mergeLodash)(translations_default[fallback], override);
+        translations_default[lang] = merge(translations_default[fallback], override);
       }
       L.PM.activeLang = lang;
       this.map.pm.Toolbar.reinit();
@@ -1457,7 +1443,7 @@ window.getLodash = _.get;
       return this.globalOptions;
     },
     setGlobalOptions(o) {
-      const options = (merge2 || window.mergeLodash)(this.globalOptions, o);
+      const options = merge(this.globalOptions, o);
       if (options.editable) {
         options.resizeableCircleMarker = options.editable;
         delete options.editable;
@@ -3202,8 +3188,6 @@ window.getLodash = _.get;
     }
   });
 
-  // src/js/Draw/L.PM.Draw.Line.js
-  var kinks = window.kinks;
   L_PM_Draw_default.Line = L_PM_Draw_default.extend({
     initialize(map) {
       this._map = map;
@@ -3325,7 +3309,7 @@ window.getLodash = _.get;
       this._change(latlngs);
     },
     hasSelfIntersection() {
-      const selfIntersection = (kinks || window.kinks)(this._layer.toGeoJSON(15));
+      const selfIntersection = kinks(this._layer.toGeoJSON(15));
       return selfIntersection.features.length > 0;
     },
     _handleSelfIntersection(addVertex, latlng) {
@@ -3336,7 +3320,7 @@ window.getLodash = _.get;
         }
         clone.addLatLng(latlng);
       }
-      const selfIntersection = (kinks || window.kinks)(clone.toGeoJSON(15));
+      const selfIntersection = kinks(clone.toGeoJSON(15));
       this._doesSelfIntersect = selfIntersection.features.length > 0;
       if (this._doesSelfIntersect) {
         if (!this.isRed) {
@@ -4107,8 +4091,6 @@ window.getLodash = _.get;
     }
   });
 
-  // src/js/helpers/turfHelper.js
-  var polygonClipping = window.polygonClipping;
   function feature(geom) {
     const feat = { type: "Feature" };
     feat.geometry = geom;
@@ -4139,7 +4121,7 @@ window.getLodash = _.get;
   function intersect(poly1, poly2) {
     const geom1 = getGeometry(poly1);
     const geom2 = getGeometry(poly2);
-    const intersection = (polygonClipping || window.polygonClipping).intersection(
+    const intersection = polygonClipping.intersection(
       geom1.coordinates,
       geom2.coordinates
     );
@@ -4152,7 +4134,7 @@ window.getLodash = _.get;
   function difference(polygon1, polygon2) {
     const geom1 = getGeometry(polygon1);
     const geom2 = getGeometry(polygon2);
-    const differenced = (polygonClipping || window.polygonClipping).difference(
+    const differenced = polygonClipping.difference(
       geom1.coordinates,
       geom2.coordinates
     );
@@ -4192,11 +4174,6 @@ window.getLodash = _.get;
     return turfMultiLineString(coords);
   }
 
-  // src/js/Draw/L.PM.Draw.Cut.js
-  var lineIntersect = window.lineIntersect;
-  var lineSplit = window.lineSplit;
-  var booleanContains = window.booleanContains;
-  var get2 = window.getLodash;
   L_PM_Draw_default.Cut = L_PM_Draw_default.Polygon.extend({
     initialize(map) {
       this._map = map;
@@ -4249,7 +4226,7 @@ window.getLodash = _.get;
         return true;
       }).filter((l) => !this._layerGroup.hasLayer(l)).filter((l) => {
         try {
-          const lineInter = !!(lineIntersect || window.lineIntersect)(layer.toGeoJSON(15), l.toGeoJSON(15)).features.length > 0;
+          const lineInter = !!lineIntersect(layer.toGeoJSON(15), l.toGeoJSON(15)).features.length > 0;
           if (lineInter || l instanceof L.Polyline && !(l instanceof L.Polygon)) {
             return lineInter;
           }
@@ -4275,7 +4252,7 @@ window.getLodash = _.get;
                 const { segment } = closest;
                 if (segment && segment.length === 2) {
                   const { indexPath, parentPath, newIndex } = L.PM.Utils._getIndexFromSegment(coords, segment);
-                  const coordsRing = indexPath.length > 1 ? (get2 || window.get)(coords, parentPath) : coords;
+                  const coordsRing = indexPath.length > 1 ? get(coords, parentPath) : coords;
                   coordsRing.splice(newIndex, 0, latlng);
                 }
               }
@@ -4332,7 +4309,7 @@ window.getLodash = _.get;
       } else {
         const features = flattenPolyline(l);
         features.forEach((feature2) => {
-          const lineDiff = (lineSplit || window.lineSplit)(feature2, layer.toGeoJSON(15));
+          const lineDiff = lineSplit(feature2, layer.toGeoJSON(15));
           let group;
           if (lineDiff && lineDiff.features.length > 0) {
             group = L.geoJSON(lineDiff);
@@ -4340,7 +4317,7 @@ window.getLodash = _.get;
             group = L.geoJSON(feature2);
           }
           group.getLayers().forEach((lay) => {
-            if (!(booleanContains || window.booleanContains)(layer.toGeoJSON(15), lay.toGeoJSON(15))) {
+            if (!booleanContains(layer.toGeoJSON(15), lay.toGeoJSON(15))) {
               lay.addTo(fg);
             }
           });
@@ -4889,8 +4866,6 @@ window.getLodash = _.get;
     return map.unproject(point, zoom);
   }
 
-  // src/js/Mixins/Rotating.js
-  var get3 = window.getLodash;
   var RotateMixin = {
     _onRotateStart(e) {
       this._preventRenderingMarkers(true);
@@ -4928,7 +4903,7 @@ window.getLodash = _.get;
         if (L.Util.isArray(latlng[0])) {
           latlng.forEach((x, i) => forEachLatLng(x, path.slice(), i));
         } else {
-          const markers = (get3 || window.getLodash)(that._markers, path);
+          const markers = get(that._markers, path);
           latlng.forEach((_latlng, j) => {
             const marker = markers[j];
             marker.setLatLng(_latlng);
@@ -5582,10 +5557,6 @@ window.getLodash = _.get;
   };
   var MarkerLimits_default = MarkerLimits;
 
-  // src/js/Edit/L.PM.Edit.Line.js
-  var lineIntersect2 = window.lineIntersect;
-  var get4 = window.getLodash;
-  var kinks2 = window.kinks;
   L_PM_Edit_default.Line = L_PM_Edit_default.extend({
     includes: [MarkerLimits_default],
     _shape: "Line",
@@ -5794,8 +5765,8 @@ window.getLodash = _.get;
         this._markers,
         leftM
       );
-      const coordsRing = indexPath.length > 1 ? (get4 || window.getLodash)(coords, parentPath) : coords;
-      const markerArr = indexPath.length > 1 ? (get4 || window.getLodash)(this._markers, parentPath) : this._markers;
+      const coordsRing = indexPath.length > 1 ? get(coords, parentPath) : coords;
+      const markerArr = indexPath.length > 1 ? get(this._markers, parentPath) : this._markers;
       coordsRing.splice(index + 1, 0, latlng);
       markerArr.splice(index + 1, 0, newM);
       this._layer.setLatLngs(coords);
@@ -5816,7 +5787,7 @@ window.getLodash = _.get;
       }
     },
     hasSelfIntersection() {
-      const selfIntersection = (kinks2 || window.kinks)(this._layer.toGeoJSON(15));
+      const selfIntersection = kinks(this._layer.toGeoJSON(15));
       return selfIntersection.features.length > 0;
     },
     _handleSelfIntersectionOnVertexRemoval() {
@@ -5834,7 +5805,7 @@ window.getLodash = _.get;
       if (this.options.allowSelfIntersection) {
         selfIntersection = false;
       } else {
-        intersection = kinks2(this._layer.toGeoJSON(15));
+        intersection = kinks(this._layer.toGeoJSON(15));
         selfIntersection = intersection.features.length > 0;
       }
       if (selfIntersection) {
@@ -5903,8 +5874,8 @@ window.getLodash = _.get;
       if (!indexPath) {
         return;
       }
-      const coordsRing = indexPath.length > 1 ? (get4 || window.getLodash)(coords, parentPath) : coords;
-      let markerArr = indexPath.length > 1 ? (get4 || window.getLodash)(this._markers, parentPath) : this._markers;
+      const coordsRing = indexPath.length > 1 ? get(coords, parentPath) : coords;
+      let markerArr = indexPath.length > 1 ? get(this._markers, parentPath) : this._markers;
       if (!this.options.removeLayerBelowMinVertexCount) {
         if (coordsRing.length <= 2 || this.isPolygon() && coordsRing.length <= 3) {
           this._flashLayer();
@@ -5933,7 +5904,7 @@ window.getLodash = _.get;
       this._layer.setLatLngs(coords);
       this._markers = removeEmptyCoordRings(this._markers);
       if (!layerRemoved) {
-        markerArr = indexPath.length > 1 ? (get4 || window.getLodash)(this._markers, parentPath) : this._markers;
+        markerArr = indexPath.length > 1 ? get(this._markers, parentPath) : this._markers;
         if (marker._middleMarkerPrev) {
           this._markerGroup.removeLayer(marker._middleMarkerPrev);
           this._removeFromCache(marker._middleMarkerPrev);
@@ -5976,7 +5947,7 @@ window.getLodash = _.get;
         this._markers,
         marker
       );
-      const parent = indexPath.length > 1 ? (get4 || window.getLodash)(coords, parentPath) : coords;
+      const parent = indexPath.length > 1 ? get(coords, parentPath) : coords;
       parent.splice(index, 1, latlng);
       this._layer.setLatLngs(coords);
     },
@@ -5985,7 +5956,7 @@ window.getLodash = _.get;
         this._markers,
         marker
       );
-      const markerArr = indexPath.length > 1 ? (get4 || window.getLodash)(this._markers, parentPath) : this._markers;
+      const markerArr = indexPath.length > 1 ? get(this._markers, parentPath) : this._markers;
       const nextMarkerIndex = (index + 1) % markerArr.length;
       const prevMarkerIndex = (index + (markerArr.length - 1)) % markerArr.length;
       const prevMarker = markerArr[prevMarkerIndex];
@@ -5996,11 +5967,11 @@ window.getLodash = _.get;
       const { prevMarker, nextMarker } = this._getNeighborMarkers(marker);
       const prevLine = L.polyline([prevMarker.getLatLng(), marker.getLatLng()]);
       const nextLine = L.polyline([marker.getLatLng(), nextMarker.getLatLng()]);
-      let prevLineIntersectionLen = (lineIntersect2 || window.lineIntersect)(
+      let prevLineIntersectionLen = lineIntersect(
         this._layer.toGeoJSON(15),
         prevLine.toGeoJSON(15)
       ).features.length;
-      let nextLineIntersectionLen = (lineIntersect2 || window.lineIntersect)(
+      let nextLineIntersectionLen = lineIntersect(
         this._layer.toGeoJSON(15),
         nextLine.toGeoJSON(15)
       ).features.length;
@@ -6055,7 +6026,7 @@ window.getLodash = _.get;
         return;
       }
       this.updatePolygonCoordsFromMarkerDrag(marker);
-      const markerArr = indexPath.length > 1 ? (get4 || window.getLodash)(this._markers, parentPath) : this._markers;
+      const markerArr = indexPath.length > 1 ? get(this._markers, parentPath) : this._markers;
       const nextMarkerIndex = (index + 1) % markerArr.length;
       const prevMarkerIndex = (index + (markerArr.length - 1)) % markerArr.length;
       const markerLatLng = marker.getLatLng();
@@ -6123,19 +6094,17 @@ window.getLodash = _.get;
     }
   });
 
-  // src/js/Edit/L.PM.Edit.Polygon.js
-  var lineIntersect3 = window.lineIntersect;
   L_PM_Edit_default.Polygon = L_PM_Edit_default.Line.extend({
     _shape: "Polygon",
     _checkMarkerAllowedToDrag(marker) {
       const { prevMarker, nextMarker } = this._getNeighborMarkers(marker);
       const prevLine = L.polyline([prevMarker.getLatLng(), marker.getLatLng()]);
       const nextLine = L.polyline([marker.getLatLng(), nextMarker.getLatLng()]);
-      const prevLineIntersectionLen = (lineIntersect3 || window.lineIntersect)(
+      const prevLineIntersectionLen = lineIntersect(
         this._layer.toGeoJSON(15),
         prevLine.toGeoJSON(15)
       ).features.length;
-      const nextLineIntersectionLen = (lineIntersect3 || window.lineIntersect)(
+      const nextLineIntersectionLen = lineIntersect(
         this._layer.toGeoJSON(15),
         nextLine.toGeoJSON(15)
       ).features.length;
@@ -7584,4 +7553,3 @@ window.getLodash = _.get;
   }
   L.PM.initialize();
 })();
-//# sourceMappingURL=leaflet-geoman.js.map
