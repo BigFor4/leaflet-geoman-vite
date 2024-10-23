@@ -7,7 +7,6 @@ import kinks from '@turf/kinks';
 import * as polygonClipping from 'polyclip-ts';
 import merge from 'lodash/merge';
 import get from 'lodash/get';
-import _ from 'lodash';
 var en_default = {
   tooltips: {
     placeMarker: "Click to place marker",
@@ -2514,7 +2513,26 @@ var SnapMixin = {
   },
   _handleSnapping(e) {
     const marker = e.target;
+    const latlngCurrent = marker.getLatLng();
+    const idLayerCurrent = this._layer.idLayer
     marker._snapped = false;
+    const currentLatlngs = JSON.parse(JSON.stringify(this._layer.getLatLngs()));
+    const indexCurrent = currentLatlngs[0].findIndex((latlng) => {
+      return latlng.lat === latlngCurrent.lat && latlng.lng === latlngCurrent.lng;
+    });
+    if (!this._layer.arraySnaped) {
+      this._layer.arraySnaped = [];
+    }
+    if (this._layer.arraySnaped?.length > 0) {
+      this._layer.arraySnaped.filter(x => x.indexCurrent === indexCurrent).map((item) => {
+        const latlngs = JSON.parse(JSON.stringify(item.layer.getLatLngs()));
+        const index = item.index;
+        if (index > -1) {
+          latlngs[0][index] = latlngCurrent;
+          item.layer.setLatLngs(latlngs);
+        }
+      });
+    }
     if (!this.throttledList) {
       this.throttledList = L.Util.throttle(
         this._handleThrottleSnapping,
@@ -2534,7 +2552,7 @@ var SnapMixin = {
       return false;
     }
     const closestLayerData = this._calcClosestLayer(
-      marker.getLatLng(),
+      latlngCurrent,
       this._snapList,
       this._layer?.typeDraw
     );
@@ -2559,7 +2577,7 @@ var SnapMixin = {
       workingLayer: this._layer,
       layerInteractedWith: closestLayer.layer,
       distance: closestLayer.distance,
-      allSnapLayers: closestLayerData.allLayers
+      allSnapLayers: closestLayerData.allLayers || []
     };
     this._fireSnapDrag(eventInfo.marker, eventInfo);
     this._fireSnapDrag(this._layer, eventInfo);
@@ -2585,48 +2603,49 @@ var SnapMixin = {
       }
       if (this._layer?.typeDraw === 'Wireframe') {
         let arraySnaped = [];
-        if (!this._layer?.arraySnaped) {
-          this._layer.arraySnaped = []
-        }
         if (eventInfo.allSnapLayers.length > 0) {
           eventInfo.allSnapLayers.map((item) => {
-            const idLayer = item.layer?.idLayer
-            if (this._layer?.arraySnaped?.find((x) => x.id === idLayer)) {
-              return
-            }
-            if (item?.layer?._latlngs?.length > 0) {
-              const dataSnap = {
-                id: item.layer.idLayer,
-                index: -1
-              };
-              const latlngs = item.layer.getLatLngs();
-              const index = latlngs[0].findIndex((latlng) => {
-                return latlng.lat === snapLatLng.lat && latlng.lng === snapLatLng.lng;
-              });
-              if (index !== -1) {
-                dataSnap.index = index;
-                arraySnaped.push(dataSnap);
-              }
+            const idLayer = item.layer?.idLayer;
+            const dataSnap = {
+              id: idLayer,
+              index: -1,
+              layer: item.layer,
+              indexCurrent,
+              idLayerCurrent
+            };
+            const latlngs = JSON.parse(JSON.stringify(item.layer.getLatLngs()));
+            const index = latlngs[0].findIndex((latlng) => {
+              const results = this._calcLayerDistances(latlng, marker);
+              const distance = Math.floor(results.distance);
+              return distance < minDistance;
+            });
+            if (index !== -1) {
+              dataSnap.index = index;
+              arraySnaped.push(dataSnap);
             }
           });
-          this._layer.arraySnaped = _.unionBy(this._layer.arraySnaped, arraySnaped, 'id');
+          if (arraySnaped?.length > 0) {
+            arraySnaped.forEach(item => {
+              const exists = this._layer.arraySnaped.find(existingItem =>
+                existingItem.id === item.id &&
+                existingItem.index === item.index
+              );
+              if (!exists) {
+                this._layer.arraySnaped.push(item);
+              }
+            });
+          }
         }
         if (this._layer.arraySnaped?.length > 0) {
-          const layers = L.PM.Utils.findLayers(this._map);
-          layers.filter(x => x.typeDraw === 'Wireframe').forEach((item) => {
-            const indexSnap = this._layer.arraySnaped.findIndex((x) => x.id === item.idLayer);
-            if (indexSnap !== -1) {
-              const latlngs = item.getLatLngs();
-              const index = this._layer.arraySnaped[indexSnap].index;
-              if (index!== -1) {
-                latlngs[0][index] = snapLatLng;
-                item.setLatLngs(latlngs);
-              }
-            }
+          this._layer.arraySnaped.filter(x => x.indexCurrent === indexCurrent).map((item) => {
+            const latlngs = JSON.parse(JSON.stringify(item.layer.getLatLngs()));
+            const index = item.index;
+            latlngs[0][index] = latlngCurrent;
+            item.layer.setLatLngs(latlngs);
           });
         }
       }
-    } else if (this._snapLatLng) {
+    } else if (this._snapLatLng && this._layer?.typeDraw !== 'Wireframe') {
       this._unsnap(eventInfo);
       marker._snapped = false;
       marker._snapInfo = void 0;
@@ -5778,6 +5797,18 @@ L_PM_Edit_default.Line = L_PM_Edit_default.extend({
     if (!this._vertexValidation("add", e)) {
       return;
     }
+    if (this._layer?.arraySnaped?.length > 0) {
+      const currentLatlngs = JSON.parse(JSON.stringify(this._layer.getLatLngs()))[0];
+      const idLayer = this._layer?.idLayer
+      const currentLatlngRightM = middleMarker.rightM.getLatLng();
+      const indexRightM = currentLatlngs.findIndex(x => x.lat === currentLatlngRightM.lat && x.lng === currentLatlngRightM.lng);
+      this._layer.arraySnaped = this._layer.arraySnaped.map(x => {
+        if (x.idLayerCurrent === idLayer && x.indexCurrent === indexRightM) {
+          x.indexCurrent = indexRightM + 1;
+        }
+        return x
+      })
+    }
     const icon = L.divIcon({ className: "marker-icon" });
     middleMarker.setIcon(icon);
     this._addMarker(middleMarker, middleMarker.leftM, middleMarker.rightM);
@@ -5790,6 +5821,18 @@ L_PM_Edit_default.Line = L_PM_Edit_default.extend({
       return;
     }
     middleMarker._dragging = true;
+    if (this._layer?.arraySnaped?.length > 0) {
+      const currentLatlngs = JSON.parse(JSON.stringify(this._layer.getLatLngs()))[0];
+      const idLayer = this._layer?.idLayer
+      const currentLatlngRightM = middleMarker.rightM.getLatLng();
+      const indexRightM = currentLatlngs.findIndex(x => x.lat === currentLatlngRightM.lat && x.lng === currentLatlngRightM.lng);
+      this._layer.arraySnaped = this._layer.arraySnaped.map(x => {
+        if (x.idLayerCurrent === idLayer && x.indexCurrent === indexRightM) {
+          x.indexCurrent = indexRightM + 1;
+        }
+        return x
+      })
+    }
     this._addMarker(middleMarker, middleMarker.leftM, middleMarker.rightM);
   },
   _onMiddleMarkerMovePrevent(e) {

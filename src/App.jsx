@@ -80,6 +80,7 @@ export default function App() {
         });
       });
       polygon4.idLayer = uuidv4();
+      polygon4.typeDraw = 'Wireframe';
       polygon4.addTo(map);
 
       // Fit map bounds to the combined bounds of all polygons
