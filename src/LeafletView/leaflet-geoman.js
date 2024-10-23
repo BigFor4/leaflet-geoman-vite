@@ -65,13 +65,14 @@ var translations_default = {
   en: en_default,
 };
 
-// src/js/Mixins/Modes/Mode.Edit.js
+// Mode.Edit.js
 var GlobalEditMode = {
   _globalEditModeEnabled: false,
   enableGlobalEditMode(o) {
     const options = {
       ...o
     };
+    console.log(options);
     this._editOption = options;
     this._globalEditModeEnabled = true;
     this.Toolbar.toggleButton("editMode", this.getGlobalEditModeEnabled());
@@ -133,7 +134,7 @@ var GlobalEditMode = {
 };
 var Mode_Edit_default = GlobalEditMode;
 
-// src/js/Mixins/Modes/Mode.Drag.js
+// Mode.Drag.js
 var GlobalDragMode = {
   _globalDragModeEnabled: false,
   enableGlobalDragMode() {
@@ -195,7 +196,7 @@ var GlobalDragMode = {
 };
 var Mode_Drag_default = GlobalDragMode;
 
-// src/js/Mixins/Modes/Mode.Removal.js
+// Mode.Removal.js
 var GlobalRemovalMode = {
   _globalRemovalModeEnabled: false,
   enableGlobalRemovalMode() {
@@ -286,7 +287,7 @@ var GlobalRemovalMode = {
 };
 var Mode_Removal_default = GlobalRemovalMode;
 
-// src/js/Mixins/Modes/Mode.Rotate.js
+// Mode.Rotate.js
 var GlobalRotateMode = {
   _globalRotateModeEnabled: false,
   enableGlobalRotateMode() {
@@ -956,7 +957,7 @@ var EventMixin = {
 };
 var Events_default = EventMixin;
 
-// src/js/Mixins/Keyboard.js
+// Keyboard.js
 var createKeyboardMixins = () => ({
   _lastEvents: { keydown: void 0, keyup: void 0, current: void 0 },
   _initKeyListener(map) {
@@ -1274,7 +1275,8 @@ var Map = L.Class.extend({
         "Circle",
         "Line",
         "Polygon",
-        "Rectangle"
+        "Rectangle",
+        "Wireframe"
       ],
       panes: {
         vertexPane: "markerPane",
@@ -1530,7 +1532,7 @@ var Map = L.Class.extend({
 });
 var L_PM_Map_default = Map;
 
-// src/js/Toolbar/L.Controls.js
+// L.Controls.js
 var PMButton = L.Control.extend({
   includes: [Events_default],
   options: {
@@ -1802,7 +1804,7 @@ var PMButton = L.Control.extend({
 });
 var L_Controls_default = PMButton;
 
-// src/js/Toolbar/L.PM.Toolbar.js
+// L.PM.Toolbar.js
 L.Control.PMButton = L_Controls_default;
 var Toolbar = L.Class.extend({
   options: {
@@ -2464,7 +2466,7 @@ var Toolbar = L.Class.extend({
 });
 var L_PM_Toolbar_default = Toolbar;
 
-// src/js/Mixins/Snapping.js
+// Snapping.js
 var SnapMixin = {
   _initSnappableMarkers() {
     this.options.snapDistance = this.options.snapDistance || 30;
@@ -2560,6 +2562,16 @@ var SnapMixin = {
     this._fireSnapDrag(eventInfo.marker, eventInfo);
     this._fireSnapDrag(this._layer, eventInfo);
     if (closestLayer.distance < minDistance) {
+      if (this._layer?.typeDraw === 'Wireframe') {
+        if (closestLayer.layer.typeDraw !== 'Wireframe') {
+          this._unsnap(eventInfo);
+          marker._snapped = false;
+          marker._snapInfo = void 0;
+          this._fireUnsnap(eventInfo.marker, eventInfo);
+          this._fireUnsnap(this._layer, eventInfo);
+          return;
+        }
+      }
       marker._orgLatLng = marker.getLatLng();
       marker.setLatLng(snapLatLng);
       marker._snapped = true;
@@ -2830,7 +2842,7 @@ var SnapMixin = {
 };
 var Snapping_default = SnapMixin;
 
-// src/js/Draw/L.PM.Draw.js
+// L.PM.Draw.js
 var merge3 = window.mergeLodash;
 var Draw = L.Class.extend({
   includes: [Snapping_default, Events_default],
@@ -3062,7 +3074,7 @@ var Draw = L.Class.extend({
 });
 var L_PM_Draw_default = Draw;
 
-// src/js/Draw/L.PM.Draw.Marker.js
+// L.PM.Draw.Marker.js
 L_PM_Draw_default.Marker = L_PM_Draw_default.extend({
   initialize(map) {
     this._map = map;
@@ -3445,7 +3457,7 @@ L_PM_Draw_default.Line = L_PM_Draw_default.extend({
   }
 });
 
-// src/js/Draw/L.PM.Draw.Polygon.js
+// L.PM.Draw.Polygon.js
 L_PM_Draw_default.Polygon = L_PM_Draw_default.Line.extend({
   initialize(map) {
     this._map = map;
@@ -3515,7 +3527,7 @@ L_PM_Draw_default.Polygon = L_PM_Draw_default.Line.extend({
   }
 });
 
-// src/js/Draw/L.PM.Draw.Rectangle.js
+// L.PM.Draw.Rectangle.js
 L_PM_Draw_default.Rectangle = L_PM_Draw_default.extend({
   initialize(map) {
     this._map = map;
@@ -3724,7 +3736,7 @@ L_PM_Draw_default.Rectangle = L_PM_Draw_default.extend({
   }
 });
 
-// src/js/Draw/L.PM.Draw.CircleMarker.js
+// L.PM.Draw.CircleMarker.js
 L_PM_Draw_default.CircleMarker = L_PM_Draw_default.extend({
   initialize(map) {
     this._map = map;
@@ -4053,7 +4065,7 @@ L_PM_Draw_default.CircleMarker = L_PM_Draw_default.extend({
   }
 });
 
-// src/js/Draw/L.PM.Draw.Circle.js
+// L.PM.Draw.Circle.js
 L_PM_Draw_default.Circle = L_PM_Draw_default.CircleMarker.extend({
   initialize(map) {
     this._map = map;
@@ -4326,7 +4338,7 @@ L_PM_Draw_default.Cut = L_PM_Draw_default.Polygon.extend({
   _change: L.Util.falseFn
 });
 
-// src/js/Draw/L.PM.Draw.Text.js
+// L.PM.Draw.Text.js
 L_PM_Draw_default.Text = L_PM_Draw_default.extend({
   initialize(map) {
     this._map = map;
@@ -4458,7 +4470,7 @@ L_PM_Draw_default.Text = L_PM_Draw_default.extend({
   }
 });
 
-// src/js/Mixins/Dragging.js
+// Dragging.js
 var DragMixin = {
   enableLayerDrag() {
     if (!this.options.draggable || !this._layer._map) {
@@ -4820,7 +4832,7 @@ var DragMixin = {
 };
 var Dragging_default = DragMixin;
 
-// src/js/helpers/ModeHelper.js
+// ModeHelper.js
 function _convertLatLng(latlng, matrix, map, zoom) {
   return map.unproject(matrix.transform(map.project(latlng, zoom)), zoom);
 }
@@ -5098,7 +5110,7 @@ var RotateMixin = {
 };
 var Rotating_default = RotateMixin;
 
-// src/js/Edit/L.PM.Edit.js
+// L.PM.Edit.js
 var Edit = L.Class.extend({
   includes: [Dragging_default, Snapping_default, Rotating_default, Events_default],
   options: {
@@ -5193,7 +5205,7 @@ var Edit = L.Class.extend({
 });
 var L_PM_Edit_default = Edit;
 
-// src/js/Edit/L.PM.Edit.LayerGroup.js
+// L.PM.Edit.LayerGroup.js
 L_PM_Edit_default.LayerGroup = L.Class.extend({
   initialize(layerGroup) {
     this._layerGroup = layerGroup;
@@ -5382,7 +5394,7 @@ L_PM_Edit_default.LayerGroup = L.Class.extend({
   }
 });
 
-// src/js/Edit/L.PM.Edit.Marker.js
+// L.PM.Edit.Marker.js
 L_PM_Edit_default.Marker = L_PM_Edit_default.extend({
   _shape: "Marker",
   initialize(layer) {
@@ -5475,7 +5487,7 @@ L_PM_Edit_default.Marker = L_PM_Edit_default.extend({
   }
 });
 
-// src/js/Mixins/MarkerLimits.js
+// MarkerLimits.js
 var MarkerLimits = {
   filterMarkerGroup() {
     this.markerCache = [];
@@ -6108,7 +6120,7 @@ L_PM_Edit_default.Polygon = L_PM_Edit_default.Line.extend({
   }
 });
 
-// src/js/Edit/L.PM.Edit.Rectangle.js
+// L.PM.Edit.Rectangle.js
 L_PM_Edit_default.Rectangle = L_PM_Edit_default.Polygon.extend({
   _shape: "Rectangle",
   // initializes Rectangle Markers
@@ -6272,7 +6284,7 @@ L_PM_Edit_default.Rectangle = L_PM_Edit_default.Polygon.extend({
   }
 });
 
-// src/js/Edit/L.PM.Edit.CircleMarker.js
+// L.PM.Edit.CircleMarker.js
 L_PM_Edit_default.CircleMarker = L_PM_Edit_default.extend({
   _shape: "CircleMarker",
   initialize(layer) {
@@ -6640,7 +6652,7 @@ L_PM_Edit_default.CircleMarker = L_PM_Edit_default.extend({
   }
 });
 
-// src/js/Edit/L.PM.Edit.Circle.js
+// L.PM.Edit.Circle.js
 L_PM_Edit_default.Circle = L_PM_Edit_default.CircleMarker.extend({
   _shape: "Circle",
   initialize(layer) {
@@ -6706,7 +6718,7 @@ L_PM_Edit_default.Circle = L_PM_Edit_default.CircleMarker.extend({
   }
 });
 
-// src/js/Edit/L.PM.Edit.ImageOverlay.js
+// L.PM.Edit.ImageOverlay.js
 L_PM_Edit_default.ImageOverlay = L_PM_Edit_default.extend({
   _shape: "ImageOverlay",
   initialize(layer) {
@@ -6771,7 +6783,7 @@ L_PM_Edit_default.ImageOverlay = L_PM_Edit_default.extend({
   }
 });
 
-// src/js/Edit/L.PM.Edit.Text.js
+// L.PM.Edit.Text.js
 L_PM_Edit_default.Text = L_PM_Edit_default.extend({
   _shape: "Text",
   initialize(layer) {
@@ -6993,7 +7005,7 @@ L_PM_Edit_default.Text = L_PM_Edit_default.extend({
   }
 });
 
-// src/js/helpers/Matrix.js
+// Matrix.js
 var Matrix = function Matrix2(a, b, c, d, e, f) {
   this._matrix = [a, b, c, d, e, f];
 };
@@ -7175,7 +7187,7 @@ Matrix.prototype = {
 };
 var Matrix_default = Matrix;
 
-// src/js/L.PM.Utils.js
+// L.PM.Utils.js
 var Utils = {
   calcMiddleLatLng(map, latlng1, latlng2) {
     const p1 = map.project(latlng1);
@@ -7353,7 +7365,7 @@ var Utils = {
 };
 var L_PM_Utils_default = Utils;
 
-// src/js/L.PM.js
+// L.PM.js
 // eslint-disable-next-line no-import-assign
 L.PM = L.PM || {
   Map: L_PM_Map_default,
@@ -7545,4 +7557,5 @@ if (L.version === "1.7.1") {
   });
 }
 L.PM.initialize();
+export default L;
 
