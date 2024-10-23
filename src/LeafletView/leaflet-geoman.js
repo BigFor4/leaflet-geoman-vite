@@ -2602,7 +2602,7 @@ var SnapMixin = {
         triggerSnap();
       }
       if (this._layer?.typeDraw === 'Wireframe') {
-        let arraySnaped = [];
+        let arraySnaped = [...this._layer.arraySnaped];
         if (eventInfo.allSnapLayers.length > 0) {
           eventInfo.allSnapLayers.map((item) => {
             const idLayer = item.layer?.idLayer;
@@ -2619,22 +2619,20 @@ var SnapMixin = {
               const distance = Math.floor(results.distance);
               return distance < minDistance;
             });
-            if (index !== -1) {
+
+
+            const existingItem = arraySnaped.find(existing =>
+              (existing.id === idLayer && indexCurrent === existing.indexCurrent)
+              ||
+              (idLayerCurrent === existing.idLayerCurrent && index === existing.index && idLayer === existing.id)
+            );
+
+            if (index !== -1 && !existingItem) {
               dataSnap.index = index;
               arraySnaped.push(dataSnap);
             }
           });
-          if (arraySnaped?.length > 0) {
-            arraySnaped.forEach(item => {
-              const exists = this._layer.arraySnaped.find(existingItem =>
-                existingItem.id === item.id &&
-                existingItem.index === item.index
-              );
-              if (!exists) {
-                this._layer.arraySnaped.push(item);
-              }
-            });
-          }
+          this._layer.arraySnaped = arraySnaped;
         }
         if (this._layer.arraySnaped?.length > 0) {
           this._layer.arraySnaped.filter(x => x.indexCurrent === indexCurrent).map((item) => {
