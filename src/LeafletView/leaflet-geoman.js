@@ -7,6 +7,7 @@ import kinks from '@turf/kinks';
 import * as polygonClipping from 'polyclip-ts';
 import merge from 'lodash/merge';
 import get from 'lodash/get';
+import _ from 'lodash';
 var en_default = {
   tooltips: {
     placeMarker: "Click to place marker",
@@ -72,7 +73,6 @@ var GlobalEditMode = {
     const options = {
       ...o
     };
-    console.log(options);
     this._editOption = options;
     this._globalEditModeEnabled = true;
     this.Toolbar.toggleButton("editMode", this.getGlobalEditModeEnabled());
@@ -2533,10 +2533,12 @@ var SnapMixin = {
     if (this._snapList.length <= 0) {
       return false;
     }
-    const closestLayer = this._calcClosestLayer(
+    const closestLayerData = this._calcClosestLayer(
       marker.getLatLng(),
-      this._snapList
+      this._snapList,
+      this._layer?.typeDraw
     );
+    const closestLayer = closestLayerData?.layerMinDistance
     if (Object.keys(closestLayer).length === 0) {
       return false;
     }
@@ -2556,19 +2558,14 @@ var SnapMixin = {
       layer: this._layer,
       workingLayer: this._layer,
       layerInteractedWith: closestLayer.layer,
-      // for lack of a better property name
-      distance: closestLayer.distance
+      distance: closestLayer.distance,
+      allSnapLayers: closestLayerData.allLayers
     };
     this._fireSnapDrag(eventInfo.marker, eventInfo);
     this._fireSnapDrag(this._layer, eventInfo);
     if (closestLayer.distance < minDistance) {
       if (this._layer?.typeDraw === 'Wireframe') {
         if (closestLayer.layer.typeDraw !== 'Wireframe') {
-          this._unsnap(eventInfo);
-          marker._snapped = false;
-          marker._snapInfo = void 0;
-          this._fireUnsnap(eventInfo.marker, eventInfo);
-          this._fireUnsnap(this._layer, eventInfo);
           return;
         }
       }
@@ -2585,6 +2582,49 @@ var SnapMixin = {
       const b = snapLatLng || {};
       if (a.lat !== b.lat || a.lng !== b.lng) {
         triggerSnap();
+      }
+      if (this._layer?.typeDraw === 'Wireframe') {
+        let arraySnaped = [];
+        if (!this._layer?.arraySnaped) {
+          this._layer.arraySnaped = []
+        }
+        if (eventInfo.allSnapLayers.length > 0) {
+          eventInfo.allSnapLayers.map((item) => {
+            const idLayer = item.layer?.idLayer
+            if (this._layer?.arraySnaped?.find((x) => x.id === idLayer)) {
+              return
+            }
+            if (item?.layer?._latlngs?.length > 0) {
+              const dataSnap = {
+                id: item.layer.idLayer,
+                index: -1
+              };
+              const latlngs = item.layer.getLatLngs();
+              const index = latlngs[0].findIndex((latlng) => {
+                return latlng.lat === snapLatLng.lat && latlng.lng === snapLatLng.lng;
+              });
+              if (index !== -1) {
+                dataSnap.index = index;
+                arraySnaped.push(dataSnap);
+              }
+            }
+          });
+          this._layer.arraySnaped = _.unionBy(this._layer.arraySnaped, arraySnaped, 'id');
+        }
+        if (this._layer.arraySnaped?.length > 0) {
+          const layers = L.PM.Utils.findLayers(this._map);
+          layers.filter(x => x.typeDraw === 'Wireframe').forEach((item) => {
+            const indexSnap = this._layer.arraySnaped.findIndex((x) => x.id === item.idLayer);
+            if (indexSnap !== -1) {
+              const latlngs = item.getLatLngs();
+              const index = this._layer.arraySnaped[indexSnap].index;
+              if (index!== -1) {
+                latlngs[0][index] = snapLatLng;
+                item.setLatLngs(latlngs);
+              }
+            }
+          });
+        }
       }
     } else if (this._snapLatLng) {
       this._unsnap(eventInfo);
@@ -2649,10 +2689,10 @@ var SnapMixin = {
       this._snapList.splice(index, 1);
     }
   },
-  _calcClosestLayer(latlng, layers) {
-    return this._calcClosestLayers(latlng, layers, 1)[0];
+  _calcClosestLayer(latlng, layers, typeDraw) {
+    return this._calcClosestLayers(latlng, layers, 1, typeDraw);
   },
-  _calcClosestLayers(latlng, layers, amount = 1) {
+  _calcClosestLayers(latlng, layers, amount = 1, typeDraw) {
     let closestLayers = [];
     let closestLayer = {};
     layers.forEach((layer, index) => {
@@ -2675,8 +2715,14 @@ var SnapMixin = {
         }
         closestLayer = results;
         closestLayer.layer = layer;
+        if (typeDraw === 'Wireframe' && layer.typeDraw !== 'Wireframe') {
+          return
+        }
         closestLayers.push(closestLayer);
       } else if (amount !== 1) {
+        if (typeDraw === 'Wireframe' && layer.typeDraw !== 'Wireframe') {
+          return
+        }
         closestLayer = {};
         closestLayer = results;
         closestLayer.layer = layer;
@@ -2693,7 +2739,10 @@ var SnapMixin = {
     if (L.Util.isArray(result)) {
       return result;
     }
-    return [result];
+    return {
+      layerMinDistance: result,
+      allLayers: closestLayers
+    };
   },
   _calcLayerDistances(latlng, layer) {
     const map = this._map;
@@ -4252,7 +4301,8 @@ L_PM_Draw_default.Cut = L_PM_Draw_default.Polygon.extend({
         _latlngInfos.forEach((info) => {
           if (info && info.snapInfo) {
             const { latlng } = info;
-            const closest = this._calcClosestLayer(latlng, [newLayer]);
+            const closestData = this._calcClosestLayer(latlng, [newLayer]);
+            const closest = closestData?.layerMinDistance;
             if (closest && closest.segment && closest.distance < this.options.snapDistance) {
               const { segment } = closest;
               if (segment && segment.length === 2) {
@@ -4649,6 +4699,7 @@ var DragMixin = {
   _dragMixinOnMouseMove(e) {
     this._overwriteEventIfItComesFromMarker(e);
     const el = this._getDOMElem();
+
     this._syncLayers("_dragMixinOnMouseMove", e);
     if (!this._dragging) {
       this._dragging = true;

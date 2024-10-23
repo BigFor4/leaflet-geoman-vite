@@ -1,5 +1,6 @@
 import L from './LeafletView/leaflet-geoman.js';
 import { useEffect, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import 'leaflet/dist/leaflet.css';
 import './LeafletView/leaflet-geoman.css';
 import './App.css';
@@ -42,11 +43,11 @@ export default function App() {
         data.pm.enable({
           snappable: true,
           draggable: true,
-          snappingOrder: ['Wireframe']
         });
       });
       polygon2.addTo(map);
       polygon2.typeDraw = 'Wireframe';
+      polygon2.idLayer = uuidv4();
       const polygon3 = L.polygon([
         [55, -8],
         [55, -3],
@@ -60,10 +61,10 @@ export default function App() {
         data.pm.enable({
           snappable: true,
           draggable: true,
-          snappingOrder: ['Wireframe']
         });
       });
       polygon3.typeDraw = 'Wireframe';
+      polygon3.idLayer = uuidv4();
       polygon3.addTo(map);
 
       const polygon4 = L.polygon([
@@ -78,6 +79,7 @@ export default function App() {
           draggable: true,
         });
       });
+      polygon4.idLayer = uuidv4();
       polygon4.addTo(map);
 
       // Fit map bounds to the combined bounds of all polygons
